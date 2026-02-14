@@ -6,15 +6,39 @@ A single-file Python CLI tool that performs both **local** (Smith-Waterman) and 
 
 ## Introduction
 
-This tool finds the best local alignment between two DNA sequences. Unlike global alignment (Needleman-Wunsch), local alignment identifies the most similar sub-regions, making it ideal for detecting conserved motifs and functional domains within divergent sequences.
+This tool performs both **local** and **global** pairwise DNA sequence alignment:
 
-The aligner uses an **affine gap model**, which distinguishes between *opening* a new gap (expensive) and *extending* an existing gap (cheaper). This produces biologically realistic alignments because real insertions and deletions tend to occur in contiguous stretches.
+- **Local Alignment (Smith-Waterman)** — Finds the highest-scoring sub-region shared between two sequences. Ideal for detecting conserved motifs, functional domains, or homologous regions within otherwise divergent sequences.
+- **Global Alignment (Needleman-Wunsch)** — Aligns the two sequences end-to-end, accounting for every character. Best suited when the sequences are of similar length and expected to be related across their full span.
+
+Both algorithms use an **affine gap model**, which distinguishes between *opening* a new gap (expensive) and *extending* an existing gap (cheaper). This produces biologically realistic alignments because real insertions and deletions tend to occur in contiguous stretches.
 
 ## Algorithm
 
 ### Smith-Waterman (Local Alignment)
 
-The algorithm builds a dynamic-programming scoring matrix. Every cell `(i, j)` represents the best alignment score ending at position `i` in Sequence 1 and position `j` in Sequence 2. A **local** constraint forces any cell to be at least 0, effectively allowing the alignment to start anywhere.
+The algorithm builds a dynamic-programming scoring matrix where every cell `(i, j)` represents the best alignment score ending at position `i` in Sequence 1 and `j` in Sequence 2. A **local** constraint forces any cell to be at least 0, allowing the alignment to start and end anywhere.
+
+- **Traceback** begins at the cell with the **highest score** in the entire matrix and stops when a cell with value 0 is reached.
+- This means only the best-matching sub-region is reported.
+
+### Needleman-Wunsch (Global Alignment)
+
+Like Smith-Waterman, this algorithm fills a scoring matrix — but with two key differences:
+
+1. **No floor at 0** — scores can go negative, because every character in both sequences must be included in the alignment.
+2. **Border initialization** — the first row and column are initialized with cumulative gap penalties (not zeros), representing the cost of aligning one sequence entirely to gaps.
+
+- **Traceback** starts at the **bottom-right corner** `(n, m)` and walks back to `(0, 0)`, guaranteeing a full end-to-end alignment.
+
+### Local vs. Global — When to Use Which
+
+| Aspect | Local (Smith-Waterman) | Global (Needleman-Wunsch) |
+|--------|----------------------|--------------------------|
+| **Use case** | Finding conserved sub-regions | Aligning full-length sequences |
+| **Score floor** | 0 (alignment can restart) | None (scores may go negative) |
+| **Traceback start** | Highest-scoring cell anywhere | Bottom-right corner (n, m) |
+| **Best for** | Divergent sequences with shared motifs | Similar-length, closely related sequences |
 
 ### Affine vs. Linear Gaps
 
@@ -23,17 +47,28 @@ The algorithm builds a dynamic-programming scoring matrix. Every cell `(i, j)` r
 | **Linear** | `G × L` | Every gap position costs the same — tends to scatter many small gaps. |
 | **Affine** | `G_open + (L − 1) × G_extend` | Opening a gap is expensive; extending is cheap — produces fewer, longer gaps. |
 
-The affine model uses **three matrices**:
+Both algorithms use the affine model with **three DP matrices** (Gotoh formulation):
 
-- **M** — best score ending with a match / mismatch.
-- **Ix** — best score ending with a gap in Sequence X.
-- **Iy** — best score ending with a gap in Sequence Y.
+- **M[i][j]** — best score ending with a match / mismatch.
+- **Ix[i][j]** — best score ending with a gap in Sequence X.
+- **Iy[i][j]** — best score ending with a gap in Sequence Y.
+
+**Recurrences (same for both algorithms):**
+
+```
+Ix[i][j] = max(M[i-1][j] + gap_open,  Ix[i-1][j] + gap_extend)
+Iy[i][j] = max(M[i][j-1] + gap_open,  Iy[i][j-1] + gap_extend)
+M[i][j]  = max(M[i-1][j-1]  + s,
+               Ix[i-1][j-1] + s,
+               Iy[i-1][j-1] + s)   // plus max(0, ...) for local only
+```
+
 
 ## Project Structure
 
 ```
 alignment/
-├── main.py          # All-in-one: parser, aligner, formatter, and CLI
+├── main.py          # All-in-one: parser, both aligners, formatter, CLI
 ├── input1.fasta     # First DNA sequence (editable)
 ├── input2.fasta     # Second DNA sequence (editable)
 ├── parameter.txt    # Scoring parameters (editable)
@@ -76,7 +111,7 @@ python main.py
 
 Results are:
 - Printed directly to the terminal.
-- Saved automatically to `output.txt`.
+- Saved automatically to `output.txt` (both local and global alignments).
 
 ## Installation
 
@@ -84,8 +119,8 @@ Results are:
 
 ```bash
 # Clone the repository
-git clone <repo-url>
-cd alignment
+git clone https://github.com/Dhanushsk16/BBL434-assignment2.git
+cd BBL434-assignment2
 
 # Run
 python main.py
@@ -93,7 +128,12 @@ python main.py
 
 ## Output Format (MARKX 0)
 
-The report includes:
+Running `python main.py` produces **two alignment reports** (both printed to the terminal and saved to `output.txt`):
+
+1. **Local Alignment** — Smith-Waterman result
+2. **Global Alignment** — Needleman-Wunsch result
+
+Each report includes:
 
 - A **header** with the alignment score, percent identity, and gap count.
 - **60-character alignment blocks** with:
