@@ -1,0 +1,33 @@
+============================================================
+Local Alignment (Smith-Waterman, Affine Gap Penalties)
+============================================================
+
+  Alignment Score : 24
+  Identity        : 12/12 (100.0%)
+  Gaps            : 0/12
+  Alignment Length: 12
+
+------------------------------------------------------------
+
+Seq1 4        CAGTTATGTCAG 15
+              ||||||||||||
+Seq2 18       CAGTTATGTCAG 29
+
+------------------------------------------------------------
+
+============================================================
+Global Alignment (Needleman-Wunsch, Affine Gap Penalties)
+============================================================
+
+  Alignment Score : -17
+  Identity        : 9/33 (27.3%)
+  Gaps            : 2/33
+  Alignment Length: 33
+
+------------------------------------------------------------
+
+Seq1 1        GCCCAGTTATGTCAGGGGGCACGAGCATGCAGA 33
+              |||    |   |    |  ||      |     
+Seq2 1        GCCGCCGTCGTTTTCAG--CAGTTATGTCAGAT 31
+
+------------------------------------------------------------
